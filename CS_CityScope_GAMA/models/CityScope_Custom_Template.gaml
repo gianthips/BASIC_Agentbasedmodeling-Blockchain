@@ -17,11 +17,11 @@ import "CityScope_main.gaml"
 global{
 	
 	init{
-		create CustomSpecies number:10;
+		create LuanaSpecies number:10;
 	}
 }
 
-species CustomSpecies skills:[moving]{
+species LuanaSpecies skills:[moving]{
 	reflex move{
 		do wander;
 	}
@@ -33,11 +33,11 @@ species CustomSpecies skills:[moving]{
 experiment customizedExperiment type:gui parent:CityScopeMain{
 	output{
 		display CityScopeAndCustomSpecies type:opengl parent:CityScopeVirtual{
-			species CustomSpecies aspect:base;
+			species LuanaSpecies aspect:base;
 			
 		}
 		display CustomSpeciesOnly type:opengl{
-			species CustomSpecies aspect:base;
+			species LuanaSpecies aspect:base;
 		}
 	}
 }
