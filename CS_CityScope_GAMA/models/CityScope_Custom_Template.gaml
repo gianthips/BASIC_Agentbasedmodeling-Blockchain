@@ -22,7 +22,6 @@ global{
 	list<BlockCar> freeBlockCars <- nil;
 	init{
 		create BlockCar number: nbBlockCar;
-		freeBlockCars <- BlockCar where(each.isFree = "true");
 		}
 		
 	reflex creationUser{
@@ -47,6 +46,7 @@ species BlockCarUser skills:[moving]{
 	string nextObjective <- "work";
 	building target <- nil;
 	float speed <- 0.1 #km/#h;
+	BlockCar myBlockCar <- nil;
 	
 	reflex updateTarget {
 		if(currentHour > startWork and currentHour < endWork){
@@ -57,18 +57,26 @@ species BlockCarUser skills:[moving]{
 		}
 	} 
 	reflex move{
-		if(target = work and nextObjective = "work"){
-	      do goto target: any_point_in(target) on: road_graph  ;
-	      nextObjective <- "home"; 
-	    }
-	    else if(target = home and nextObjective = "home"){
-	      do goto target: any_point_in(target) on: road_graph  ;
-	      nextObjective <- "work"; 
-	    }
+		if(target != nil){
+		  point togoTarget <- any_point_in(target);
+		  write(togoTarget);	
+		  if(target = work and nextObjective = "work"){
+			  //do askBlockCar(location,work);
+		      do goto target: togoTarget on: road_graph  ;
+		      nextObjective <- "home";
+	      }
+		  else if(target = home and nextObjective = "home"){
+		    do goto target: togoTarget on: road_graph  ;
+		    nextObjective <- "work"; 
+		  }
+		}
+		
+	    target <- nil;
 	}
 	
-	action askBlockCar(point startPoint, point endPoint){
-		BlockCar myBlockCar <- one_of(freeBlockCars); //TODO closest_to(self)
+	action askBlockCar(point startPoint, building endPoint){
+		freeBlockCars <- BlockCar where(each.isFree = true);
+		myBlockCar <- one_of(freeBlockCars); //TODO closest_to(self
 		ask myBlockCar{
 			do addPassenger(startPoint, endPoint); //TODO gérer le return ?
 		}
@@ -83,7 +91,8 @@ species BlockCar skills:[moving]{
 	int nbMaxPassenger <- 1; //TODO Mettre 4
 	int currentNbPassenger <- 0;
 	list<point> startPoints <- [];
-	list<point> endPoints <- [];
+	list<building> endPoints <- [];
+	float speed <- 0.1 #km/#h;
 	
 	bool isFree <- true;
 	
@@ -92,25 +101,29 @@ species BlockCar skills:[moving]{
 	}
 	
 	reflex move{
-		if(isFree = true){
-			do wander on: road_graph;
-		}
-		
-		else{
-			do goto target: startPoints[1] on: road_graph;
-			do goto target: endPoints[1] on: road_graph;
-			isFree <- true;
-			freeBlockCars <- BlockCar where(each.isFree = "true");
+		if(isFree = false and currentNbPassenger >=1){
+			point target <- (startPoints at 0);
+			do goto target: target on: road_graph;
+			if(location = target){
+				do dropOff;
+			}
 		}
 	}
 	
-	action addPassenger(point startPoint, point endPoint){
+	action dropOff{
+		point target <- any_point_in(endPoints at 0);
+		do goto target: target on: road_graph;
+		if(location = target){
+			isFree <- true;
+			write("coucou");
+		}
+	}
+	action addPassenger(point startPoint, building endPoint){
 		bool ret <- false;
-		if(currentNbPassenger < 4){
+		if(currentNbPassenger < nbMaxPassenger){
 			isFree <- false;
-			freeBlockCars <- BlockCar where(each.isFree = "true");
-			startPoints[currentNbPassenger+1] <- startPoint;
-			endPoints[currentNbPassenger+1] <- endPoint;
+			add startPoint to: startPoints;
+			add endPoint to: endPoints;
 			ret <- true;
 			currentNbPassenger <- currentNbPassenger + 1;
 		}
