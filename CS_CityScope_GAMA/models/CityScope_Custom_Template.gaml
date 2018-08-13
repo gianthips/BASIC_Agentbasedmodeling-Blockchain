@@ -15,7 +15,7 @@ import "CityScope_main.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <- 10;
+	int nbBlockCarUser <- 1;
 	int nbBlockCar <- 1;
 	int currentHour update: (time / #hour) mod 24;
 	float step <- 5 #mn;
@@ -28,10 +28,13 @@ global{
 	reflex creationUser{
 		if(cycle = 1){
 			create BlockCarUser number: nbBlockCarUser{
-			home <- one_of(world.getAmenities());
-			location <- any_location_in (home);
-			work <- one_of(world.getBuildings());
-		}
+				home <- one_of(world.amenity);
+				location <- any_location_in (home);
+				write(location);
+				work <- one_of(world.building);
+				write(any_location_in(work));
+				write("-------------------------");
+			}
 		}
 	}
 }
@@ -43,13 +46,13 @@ species BlockCarUser skills:[moving]{
 	int endWork <- 16  ;
 	string nextObjective <- "work";
 	building target <- nil;
-	float speed <- 1 #km/#h;
+	float speed <- 0.1 #km/#h;
 	
 	reflex updateTarget {
 		if(currentHour > startWork and currentHour < endWork){
 			target <- work;
 		}
-		if(currentHour > endWork){
+		else if(currentHour > endWork){
 			target <- home;
 		}
 	} 
@@ -58,7 +61,7 @@ species BlockCarUser skills:[moving]{
 	      do goto target: any_point_in(target) on: road_graph  ;
 	      nextObjective <- "home"; 
 	    }
-	    if(target = home and nextObjective = "home"){
+	    else if(target = home and nextObjective = "home"){
 	      do goto target: any_point_in(target) on: road_graph  ;
 	      nextObjective <- "work"; 
 	    }
