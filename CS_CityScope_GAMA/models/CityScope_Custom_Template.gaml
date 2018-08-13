@@ -15,23 +15,25 @@ import "CityScope_main.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <- 1;
+	int nbBlockCarUser <- 10;
 	int nbBlockCar <- 1;
 	int currentHour update: (time / #hour) mod 24;
 	float step <- 5 #mn;
 	list<BlockCar> freeBlockCars <- nil;
 	init{
-		create BlockCarUser number: nbBlockCarUser{
-			home <- one_of(world.getBuildings());
-			if(home = nil){
-				write("Coucou");
-			}	
+		create BlockCar number: nbBlockCar;
+		freeBlockCars <- BlockCar where(each.isFree = "true");
+		}
+		
+	reflex creationUser{
+		if(cycle = 1){
+			create BlockCarUser number: nbBlockCarUser{
+			home <- one_of(world.getAmenities());
 			location <- any_location_in (home);
 			work <- one_of(world.getBuildings());
 		}
-		//create BlockCar number: nbBlockCar;
-		//freeBlockCars <- BlockCar where(each.isFree = "true");
 		}
+	}
 }
 
 species BlockCarUser skills:[moving]{
@@ -40,30 +42,26 @@ species BlockCarUser skills:[moving]{
 	int startWork <- 7 ;
 	int endWork <- 16  ;
 	string nextObjective <- "work";
-	point target <- nil;
-	float speed <- 4 #km/#h;
+	building target <- nil;
+	float speed <- 1 #km/#h;
 	
 	reflex updateTarget {
 		if(currentHour > startWork and currentHour < endWork){
-			target <- any_point_in(work);
+			target <- work;
 		}
-		if(currentHour < startWork or currentHour > endWork){
-			target <- any_point_in(home);
+		if(currentHour > endWork){
+			target <- home;
 		}
 	} 
 	reflex move{
-		//do wander on: road_graph;
 		if(target = work and nextObjective = "work"){
-	      do goto target: target on: road_graph  ;
+	      do goto target: any_point_in(target) on: road_graph  ;
 	      nextObjective <- "home"; 
 	    }
 	    if(target = home and nextObjective = "home"){
-	      do goto target: target on: road_graph  ;
+	      do goto target: any_point_in(target) on: road_graph  ;
 	      nextObjective <- "work"; 
 	    }
-		if (target = location) {
-			target <- nil ;
-		}
 	}
 	
 	action askBlockCar(point startPoint, point endPoint){

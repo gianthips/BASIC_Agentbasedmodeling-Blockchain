@@ -227,15 +227,12 @@ global {
 	}
 	
 	list<building> getBuildings {
-		list<building> buildings <- building where (each.usage = "O");
-		if(one_of(buildings) = nil){
-			write ("Salut");
-		}
+		list<building> buildings <- building where(each.usage="O");
 		return buildings;
 	}
 	
 	list<amenity> getAmenities{
-		list<amenity> amenities <- amenity where (1=1);
+		list<amenity> amenities <- amenity;
 		return amenities;
 	}
 }
