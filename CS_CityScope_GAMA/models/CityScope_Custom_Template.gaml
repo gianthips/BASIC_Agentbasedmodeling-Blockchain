@@ -15,10 +15,10 @@ import "CityScope_main.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <- 1;
+	int nbBlockCarUser <- 10;
 	int nbBlockCar <- 1;
 	int currentHour update: (time / #hour) mod 24;
-	float step <- 5 #mn;
+	float step <- 1 #mn;
 	list<BlockCar> freeBlockCars <- nil;
 	init{
 	}
@@ -29,10 +29,7 @@ global{
 	     create BlockCarUser number: nbBlockCarUser{
 		     home <- one_of(world.amenity);
 			 location <- any_location_in (home);
-			 write(location);
 			 work <- one_of(world.building);
-			 write(any_location_in(work));
-			 write("-------------------------");
 		}
   }
 }
@@ -42,35 +39,39 @@ species BlockCarUser skills:[moving]{
 	building work;
 	int startWork <- 7 ;
 	int endWork <- 16  ;
-	string nextObjective <- "work";
-	building target <- nil;
-	float speed <- 0.1 #km/#h;
+	string nextObjective <- "home";
+	point target <- nil;
+	float speed <- 1 #km/#h;
 	BlockCar myBlockCar <- nil;
+	bool visible <- true;
 	
 	reflex updateTarget {
-		if(currentHour > startWork and currentHour < endWork){
-			target <- work;
+		if(currentHour > startWork and currentHour < endWork and nextObjective = "home"){
+			target <- any_point_in(work);
+			nextObjective <- "work";
+			write("Objective: "+nextObjective);
 		}
-		else if(currentHour > endWork){
-			target <- home;
+		else if(currentHour > endWork and nextObjective = "work"){
+			target <- any_point_in(home);
+			nextObjective <- "home";
+			write("Objective: "+nextObjective);
 		}
 	} 
 	reflex move{
 		if(target != nil){
-		  point togoTarget <- any_point_in(target);
-		  write(togoTarget);	
-		  if(target = work and nextObjective = "work"){
+		  if(nextObjective = "work"){
 			  //do askBlockCar(location,work);
-		      do goto target: togoTarget on: road_graph  ;
-		      nextObjective <- "home";
+		      do goto target: target on: road_graph  ;
 	      }
-		  else if(target = home and nextObjective = "home"){
-		    do goto target: togoTarget on: road_graph  ;
-		    nextObjective <- "work"; 
+		  else if(nextObjective = "home"){
+		    //do askBlockCar(location, home);
+		    do goto target: target on: road_graph  ;
 		  }
 		}
 		
-	    target <- nil;
+		if(target = location){
+			target <- nil;
+		}
 	}
 	
 	action askBlockCar(point startPoint, building endPoint){
@@ -92,6 +93,8 @@ species BlockCar skills:[moving]{
 	list<point> startPoints <- [];
 	list<building> endPoints <- [];
 	float speed <- 0.1 #km/#h;
+	bool toPickUp <- false;
+	bool toDropOff <- false;
 	
 	bool isFree <- true;
 	
@@ -107,15 +110,19 @@ species BlockCar skills:[moving]{
 				do dropOff;
 			}
 		}
+		else{
+			do wander on: road_graph;
+		}
 	}
 	
 	action dropOff{
-		point target <- any_point_in(endPoints at 0);
+		point target <- {10.0,10.0};//any_point_in(endPoints at 0);
 		do goto target: target on: road_graph;
-		if(location = target){
-			isFree <- true;
-			write("coucou");
-		}
+		startPoints[] >- 0;
+		endPoints[] >-0;
+		currentNbPassenger <- currentNbPassenger - 1;
+		isFree <- true;
+		
 	}
 	action addPassenger(point startPoint, building endPoint){
 		bool ret <- false;
@@ -134,6 +141,14 @@ species BlockCar skills:[moving]{
 		isFree <- val;
 	}
 	
+	
+}
+
+species transaction{
+	BlockCarUser user;
+	BlockCar driver;
+	point startPoint;
+	point endPoint;
 	
 }
 
