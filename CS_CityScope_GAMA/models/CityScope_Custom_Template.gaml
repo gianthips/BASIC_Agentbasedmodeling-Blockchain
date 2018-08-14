@@ -15,8 +15,8 @@ import "CityScope_main.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <- 1;
-	int nbBlockCar <- 1;
+	int nbBlockCarUser <-10;
+	int nbBlockCar <- 4;
 	
 	int currentHour update: (time / #hour) mod 24;
 	float step <- 3 #mn;
@@ -45,6 +45,7 @@ species BlockCarUser skills:[moving]{
 	float speed <- 1 #km/#h;
 	BlockCar myBlockCar <- nil;
 	bool waitingForCar <- false;
+	bool askingForCar <- false; //TODO
 	
 	reflex updateTarget {
 		if(currentHour > startWork and currentHour < endWork and (nextObjective = "home")){
@@ -60,24 +61,25 @@ species BlockCarUser skills:[moving]{
 	reflex move{
 		if(waitingForCar = true){
 		}
-		
 		else if(target != nil){
 		  if(nextObjective = "work"){
-		  	write ("User: asking car to go work");
-			loop while: (myBlockCar = nil){
+			if(myBlockCar = nil){
+				askingForCar <- true;
 				do askBlockCar(location,work);
-				write("Bloqué");
 			}
-			waitingForCar <- true;
+			if(myBlockCar != nil){
+				waitingForCar <- true;
+			}
 	      }
 	      
 		  else if(nextObjective = "home"){
-		    write("User: asking car to go home");
-		    loop while: (myBlockCar = nil){
+		    if(myBlockCar = nil){
+		    	askingForCar <- true;
 				do askBlockCar(location,home);
-				write("Bloqué");
 			}
-		    waitingForCar <- true;
+			if(myBlockCar != nil){
+				waitingForCar <- true;
+			}
 		  }
 		}
 	}
@@ -91,7 +93,7 @@ species BlockCarUser skills:[moving]{
 		return myBlockCar;
 	}
 	aspect base{
-		if(waitingForCar = true){
+		if(askingForCar = true){
 			draw circle(15#m) color:#blue;
 		}
 		else{
@@ -126,7 +128,6 @@ species BlockCar skills:[moving]{
 			target <- (startPoints at 0);
 			do goto target: target on: road_graph;
 			if(location = target){
-				write("Car: Pick Up");
 				objective <- "dropOff";
 			}
 		}
@@ -138,7 +139,6 @@ species BlockCar skills:[moving]{
 			}
 			if(location = target){
 				do dropOff(passengers at 0);
-				write("Car: Drop Off");
 				objective <- "wander";
 			}
 		}
@@ -154,6 +154,7 @@ species BlockCar skills:[moving]{
 		passengers[] >-0;
 		user.target <- nil;
 		user.waitingForCar <- false;
+		user.askingForCar <- false;
 		user.myBlockCar <- nil;
 		if(length(passengers) = 0){ //TODO gerer plusieurs voitures
 			isFree <- true;
