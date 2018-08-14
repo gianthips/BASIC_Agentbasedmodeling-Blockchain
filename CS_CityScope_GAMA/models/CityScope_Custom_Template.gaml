@@ -15,10 +15,11 @@ import "CityScope_main.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <- 10;
+	int nbBlockCarUser <- 1;
 	int nbBlockCar <- 1;
+	
 	int currentHour update: (time / #hour) mod 24;
-	float step <- 1 #mn;
+	float step <- 3 #mn;
 	list<BlockCar> freeBlockCars <- nil;
 	init{
 	}
@@ -27,9 +28,9 @@ global{
 		 create BlockCar number: nbBlockCar;
 		 freeBlockCars <- BlockCar where(each.isFree = "true");
 	     create BlockCarUser number: nbBlockCarUser{
-		     home <- one_of(world.amenity);
+		     home <- one_of(world.building where (each.usage = "R"));
 			 location <- any_location_in (home);
-			 work <- one_of(world.building);
+			 work <- one_of(world.building where (each.usage = "O"));
 		}
   }
 }
@@ -37,111 +38,137 @@ global{
 species BlockCarUser skills:[moving]{
 	building home;
 	building work;
-	int startWork <- 7 ;
-	int endWork <- 16  ;
+	int startWork <- world.min_work_start + rnd (world.max_work_start - world.min_work_start);
+	int endWork <- world.min_work_end + rnd (world.max_work_end - world.min_work_end);
 	string nextObjective <- "home";
 	point target <- nil;
 	float speed <- 1 #km/#h;
 	BlockCar myBlockCar <- nil;
-	bool visible <- true;
+	bool waitingForCar <- false;
 	
 	reflex updateTarget {
-		if(currentHour > startWork and currentHour < endWork and nextObjective = "home"){
+		if(currentHour > startWork and currentHour < endWork and (nextObjective = "home")){
 			target <- any_point_in(work);
 			nextObjective <- "work";
-			write("Objective: "+nextObjective);
 		}
-		else if(currentHour > endWork and nextObjective = "work"){
+		else if(currentHour > endWork and (nextObjective = "work")){
 			target <- any_point_in(home);
 			nextObjective <- "home";
-			write("Objective: "+nextObjective);
 		}
 	} 
+	
 	reflex move{
-		if(target != nil){
-		  if(nextObjective = "work"){
-			  //do askBlockCar(location,work);
-		      do goto target: target on: road_graph  ;
-	      }
-		  else if(nextObjective = "home"){
-		    //do askBlockCar(location, home);
-		    do goto target: target on: road_graph  ;
-		  }
+		if(waitingForCar = true){
 		}
 		
-		if(target = location){
-			target <- nil;
+		else if(target != nil){
+		  if(nextObjective = "work"){
+		  	write ("User: asking car to go work");
+			loop while: (myBlockCar = nil){
+				do askBlockCar(location,work);
+				write("Bloqué");
+			}
+			waitingForCar <- true;
+	      }
+	      
+		  else if(nextObjective = "home"){
+		    write("User: asking car to go home");
+		    loop while: (myBlockCar = nil){
+				do askBlockCar(location,home);
+				write("Bloqué");
+			}
+		    waitingForCar <- true;
+		  }
 		}
 	}
 	
-	action askBlockCar(point startPoint, building endPoint){
+	BlockCar askBlockCar(point startPoint, building endPoint){
 		freeBlockCars <- BlockCar where(each.isFree = true);
-		myBlockCar <- one_of(freeBlockCars); //TODO closest_to(self
+		myBlockCar <- one_of(freeBlockCars); //TODO closest_to(self)
 		ask myBlockCar{
-			do addPassenger(startPoint, endPoint); //TODO gérer le return ?
+			do addPassenger(startPoint, endPoint,myself);
 		}
+		return myBlockCar;
 	}
 	aspect base{
-		draw circle(10#m) color:#red;
+		if(waitingForCar = true){
+			draw circle(15#m) color:#blue;
+		}
+		else{
+			draw circle(5#m) color:#blue;
+		}
+		
 	}
 }
 
 
 species BlockCar skills:[moving]{
 	int nbMaxPassenger <- 1; //TODO Mettre 4
-	int currentNbPassenger <- 0;
 	list<point> startPoints <- [];
 	list<building> endPoints <- [];
-	float speed <- 0.1 #km/#h;
-	bool toPickUp <- false;
-	bool toDropOff <- false;
-	
+	list<BlockCarUser> passengers <- [];
+	point target <- nil;
+	float speed <- 1 #km/#h;
 	bool isFree <- true;
-	
+	string objective <- "wander";
+		
 	aspect base{
-		draw circle(10#m) color:#blue;
+		if(isFree = true){
+			draw circle(20#m) color:#green;
+		}
+		else{
+			draw circle(20#m) color:#red;
+		}
 	}
 	
 	reflex move{
-		if(isFree = false and currentNbPassenger >=1){
-			point target <- (startPoints at 0);
+		if(objective = "pickUp"){
+			target <- (startPoints at 0);
 			do goto target: target on: road_graph;
 			if(location = target){
-				do dropOff;
+				write("Car: Pick Up");
+				objective <- "dropOff";
 			}
 		}
-		else{
+		else if (objective = "dropOff"){
+			target <- any_point_in(endPoints at 0);
+			do goto target: target on: road_graph;
+			loop user over:passengers{
+				user.location <- location;
+			}
+			if(location = target){
+				do dropOff(passengers at 0);
+				write("Car: Drop Off");
+				objective <- "wander";
+			}
+		}
+		
+		else if(objective = "wander"){
 			do wander on: road_graph;
 		}
 	}
 	
-	action dropOff{
-		point target <- {10.0,10.0};//any_point_in(endPoints at 0);
-		do goto target: target on: road_graph;
-		startPoints[] >- 0;
+	action dropOff(BlockCarUser user){
+		startPoints[] >-0;
 		endPoints[] >-0;
-		currentNbPassenger <- currentNbPassenger - 1;
-		isFree <- true;
-		
-	}
-	action addPassenger(point startPoint, building endPoint){
-		bool ret <- false;
-		if(currentNbPassenger < nbMaxPassenger){
-			isFree <- false;
-			add startPoint to: startPoints;
-			add endPoint to: endPoints;
-			ret <- true;
-			currentNbPassenger <- currentNbPassenger + 1;
+		passengers[] >-0;
+		user.target <- nil;
+		user.waitingForCar <- false;
+		user.myBlockCar <- nil;
+		if(length(passengers) = 0){ //TODO gerer plusieurs voitures
+			isFree <- true;
 		}
-		return ret;
 		
 	}
-	
-	action setFree(bool val){
-		isFree <- val;
-	}
-	
-	
+	action addPassenger(point startPoint, building endPoint, BlockCarUser user){
+		add startPoint to: startPoints;
+		add endPoint to: endPoints;
+		add user to: passengers;
+		if(length(passengers) = nbMaxPassenger){
+			isFree <- false;
+		}
+		objective <- "pickUp";
+	}	
 }
 
 species transaction{
@@ -149,19 +176,20 @@ species transaction{
 	BlockCar driver;
 	point startPoint;
 	point endPoint;
-	
 }
 
 experiment customizedExperiment type:gui parent:CityScopeMain{
 	output{
 		display CityScopeAndCustomSpecies type:opengl parent:CityScopeVirtual{
-			species BlockCarUser aspect:base;
 			species BlockCar aspect:base;
+			species BlockCarUser aspect:base;
+			
 			
 		}
 		display CustomSpeciesOnly type:opengl{
-			species BlockCarUser aspect:base;
-			species BlockCar aspect:base;	
+			species BlockCar aspect:base;
+			species BlockCarUser  aspect:base;
+				
 		}
 	}
 }
