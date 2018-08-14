@@ -16,7 +16,7 @@ import "CityScope_main.gaml"
 
 global{
 	int nbBlockCarUser <-10;
-	int nbBlockCar <- 4;
+	int nbBlockCar <- 3;
 	
 	int currentHour update: (time / #hour) mod 24;
 	float step <- 3 #mn;
@@ -86,7 +86,7 @@ species BlockCarUser skills:[moving]{
 	
 	BlockCar askBlockCar(point startPoint, building endPoint){
 		freeBlockCars <- BlockCar where(each.isFree = true);
-		myBlockCar <- one_of(freeBlockCars); //TODO closest_to(self)
+		myBlockCar <- freeBlockCars closest_to(self);
 		ask myBlockCar{
 			do addPassenger(startPoint, endPoint,myself);
 		}
