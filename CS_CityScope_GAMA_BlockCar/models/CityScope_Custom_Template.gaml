@@ -15,15 +15,15 @@ import "CityScope_main.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <-2;
-	int nbBlockCar <- 1;
+	int nbBlockCarUser <-100;
+	int nbBlockCar <- 30;
 	
 	int currentHour update: (time / #hour) mod 24;
-	float step <- 3 #mn;
+	float step <- 1 #mn;
 	list<BlockCar> freeBlockCars <- nil;
 	
-	int distanceStart <- 1000;
-	int distanceEnd <- 1000;
+	int distanceStart <- 200;
+	int distanceEnd <- 500;
 	init{
 	}
 	
@@ -41,7 +41,7 @@ global{
 species BlockCarUser skills:[moving]{
 	building home;
 	building work;
-	int startWork <- world.min_work_start + rnd (world.max_work_start - world.min_work_start); //TODO
+	int startWork <- world.min_work_start + rnd (world.max_work_start - world.min_work_start);
 	int endWork <- world.min_work_end + rnd (world.max_work_end - world.min_work_end);
 	string nextObjective <- "home";
 	point target <- nil;
@@ -52,7 +52,8 @@ species BlockCarUser skills:[moving]{
 	list<BlockCarUser> copassengers <- nil;
 	bool inAGroup <- false;
 	Transaction currentTransaction <- nil;
-	float waitTime update: (step * cycle);
+	float waitTime;
+	float maxWaitTime <- 15.0;
 	
 	reflex updateTarget {
 		if(currentHour > startWork and currentHour < endWork and (nextObjective = "home")){
@@ -81,14 +82,16 @@ species BlockCarUser skills:[moving]{
 	action movement(building start, building end){
 		if(currentTransaction = nil){
 			do createAndAddTransaction(start, end);
-			waitTime <- 0.0;
+			waitTime <- step*cycle;
 		}
 		if(myBlockCar = nil){
 			askingForCar <- true;
 			if(inAGroup = false){
 				copassengers <- findPeople();
-				if(length(copassengers) > 1){ //TODO waitTime
-					write("Groupe formé");
+				if(length(copassengers) > 1 or (step*cycle - waitTime) > maxWaitTime){
+					if(length(copassengers) > 4){
+						write("hello");
+					}
 					inAGroup <- true;
 					loop user over: copassengers{
 						user.inAGroup <- true;
@@ -150,7 +153,7 @@ species BlockCar skills:[moving]{
 	list<building> endPoints <- [];
 	list<BlockCarUser> passengers <- [];
 	point target <- nil;
-	float speed <- 1 #km/#h;
+	float speed <- 10 #km/#h;
 	bool isFree <- true;
 	string objective <- "wander";
 	list<Transaction> currentTransactions;
