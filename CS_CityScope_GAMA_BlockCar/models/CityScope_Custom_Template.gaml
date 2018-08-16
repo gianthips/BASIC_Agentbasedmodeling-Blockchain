@@ -41,7 +41,7 @@ global{
 species BlockCarUser skills:[moving]{
 	building home;
 	building work;
-	int startWork <- 7;//world.min_work_start + rnd (world.max_work_start - world.min_work_start); //TODO
+	int startWork <- world.min_work_start + rnd (world.max_work_start - world.min_work_start); //TODO
 	int endWork <- world.min_work_end + rnd (world.max_work_end - world.min_work_end);
 	string nextObjective <- "home";
 	point target <- nil;
@@ -87,7 +87,8 @@ species BlockCarUser skills:[moving]{
 			askingForCar <- true;
 			if(inAGroup = false){
 				copassengers <- findPeople();
-				if(length(copassengers) > 1){
+				if(length(copassengers) > 1){ //TODO waitTime
+					write("Groupe formé");
 					inAGroup <- true;
 					loop user over: copassengers{
 						user.inAGroup <- true;
@@ -211,14 +212,19 @@ species BlockCar skills:[moving]{
 	}
 	
 	action dropOff(BlockCarUser user){
+		(user.currentTransaction).endHour <- currentHour;
+		//do saveTransaction(user.currentTransaction);
 		user.target <- nil;
 		user.waitingForCar <- false;
 		user.askingForCar <- false;
 		user.inCar <- false;
 		user.myBlockCar <- nil;	
 		user.inAGroup <- false;
-		(user.currentTransaction).endHour <- currentHour; //TODO WRITE TRANSACTION IN A CVS FILE
-		user.currentTransaction <- nil; //TODO faire ca plus propre	
+		user.currentTransaction <- nil;	
+	}
+	
+	action saveTransaction(Transaction trans){
+		save [trans.user.name,trans.driver.name, trans.startPoint.name, trans.endPoint.name,trans.startHour,trans.endHour] to: "../results/simulation.csv" type:"csv" rewrite: false;
 	}
 	
 	action addPassengers(list<BlockCarUser> users){ //TODO mabe mieux d'utilisr les transactions et pas les users ?
