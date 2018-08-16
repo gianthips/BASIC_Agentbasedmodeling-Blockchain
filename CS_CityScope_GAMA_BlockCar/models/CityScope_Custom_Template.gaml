@@ -15,12 +15,15 @@ import "CityScope_main.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <-10;
-	int nbBlockCar <- 3;
+	int nbBlockCarUser <-2;
+	int nbBlockCar <- 1;
 	
 	int currentHour update: (time / #hour) mod 24;
 	float step <- 3 #mn;
 	list<BlockCar> freeBlockCars <- nil;
+	
+	int distanceStart <- 1000;
+	int distanceEnd <- 1000;
 	init{
 	}
 	
@@ -38,14 +41,18 @@ global{
 species BlockCarUser skills:[moving]{
 	building home;
 	building work;
-	int startWork <- world.min_work_start + rnd (world.max_work_start - world.min_work_start);
+	int startWork <- 7;//world.min_work_start + rnd (world.max_work_start - world.min_work_start); //TODO
 	int endWork <- world.min_work_end + rnd (world.max_work_end - world.min_work_end);
 	string nextObjective <- "home";
 	point target <- nil;
-	float speed <- 1 #km/#h;
 	BlockCar myBlockCar <- nil;
 	bool waitingForCar <- false;
-	bool askingForCar <- false; //TODO
+	bool askingForCar <- false; //TODO ce truc sert juste pour l'affichage : utile?
+	bool inCar <- false;
+	list<BlockCarUser> copassengers <- nil;
+	bool inAGroup <- false;
+	Transaction currentTransaction <- nil;
+	float waitTime update: (step * cycle);
 	
 	reflex updateTarget {
 		if(currentHour > startWork and currentHour < endWork and (nextObjective = "home")){
@@ -63,35 +70,67 @@ species BlockCarUser skills:[moving]{
 		}
 		else if(target != nil){
 		  if(nextObjective = "work"){
-			if(myBlockCar = nil){
-				askingForCar <- true;
-				do askBlockCar(location,work);
-			}
-			if(myBlockCar != nil){
-				waitingForCar <- true;
-			}
-	      }
-	      
+		  	do movement(home,work);
+		  }	      
 		  else if(nextObjective = "home"){
-		    if(myBlockCar = nil){
-		    	askingForCar <- true;
-				do askBlockCar(location,home);
-			}
-			if(myBlockCar != nil){
-				waitingForCar <- true;
-			}
+		  	do movement(work,home);
 		  }
 		}
 	}
 	
-	BlockCar askBlockCar(point startPoint, building endPoint){
+	action movement(building start, building end){
+		if(currentTransaction = nil){
+			do createAndAddTransaction(start, end);
+			waitTime <- 0.0;
+		}
+		if(myBlockCar = nil){
+			askingForCar <- true;
+			if(inAGroup = false){
+				copassengers <- findPeople();
+				if(length(copassengers) > 1){
+					inAGroup <- true;
+					loop user over: copassengers{
+						user.inAGroup <- true;
+					}
+					do askBlockCar;
+					loop user over: copassengers{
+						user.myBlockCar <- self.myBlockCar;
+					}
+					ask myBlockCar{
+						do addPassengers(myself.copassengers);
+					}
+				}
+			}			
+		  }
+		  if(myBlockCar != nil){
+			waitingForCar <- true;
+			currentTransaction.driver <- myBlockCar;
+		  }
+	}
+	
+	BlockCar askBlockCar{
 		freeBlockCars <- BlockCar where(each.isFree = true);
 		myBlockCar <- freeBlockCars closest_to(self);
-		ask myBlockCar{
-			do addPassenger(startPoint, endPoint,myself);
-		}
 		return myBlockCar;
 	}
+	
+	list<BlockCarUser> findPeople{
+		list<BlockCarUser> peoples <- nil;
+		peoples <- BlockCarUser where(each.askingForCar = true and each.inAGroup = false and each distance_to self < distanceStart and each.target distance_to self.target < distanceEnd);
+		return peoples;
+	}
+	
+	
+	action createAndAddTransaction(building start, building end){
+		create Transaction returns: trans{
+			user<-myself;
+			startPoint <-start;
+			endPoint <- end;
+			startHour <- currentHour;					
+		}
+		currentTransaction <- trans at 0;
+	}
+	
 	aspect base{
 		if(askingForCar = true){
 			draw circle(15#m) color:#blue;
@@ -113,6 +152,8 @@ species BlockCar skills:[moving]{
 	float speed <- 1 #km/#h;
 	bool isFree <- true;
 	string objective <- "wander";
+	list<Transaction> currentTransactions;
+	int indexPassenger <- 0;
 		
 	aspect base{
 		if(isFree = true){
@@ -125,21 +166,42 @@ species BlockCar skills:[moving]{
 	
 	reflex move{
 		if(objective = "pickUp"){
-			target <- (startPoints at 0);
+			target <- (startPoints at indexPassenger);
 			do goto target: target on: road_graph;
+			loop user over:passengers{
+				if(user.inCar = true){
+					user.location <- location;	
+				}
+			}
+			
 			if(location = target){
-				objective <- "dropOff";
+				(passengers at indexPassenger).inCar <- true;
+				indexPassenger <- indexPassenger + 1;
+				if(indexPassenger = length(passengers)){
+					objective <- "dropOff";
+					indexPassenger <- 0;
+				}
 			}
 		}
 		else if (objective = "dropOff"){
-			target <- any_point_in(endPoints at 0);
+			target <- any_point_in(endPoints at indexPassenger);
 			do goto target: target on: road_graph;
 			loop user over:passengers{
-				user.location <- location;
+				if(user.inCar = true){
+					user.location <- location;	
+				}
 			}
 			if(location = target){
-				do dropOff(passengers at 0);
-				objective <- "wander";
+				do dropOff(passengers at indexPassenger);
+				indexPassenger <- indexPassenger + 1;
+				if(indexPassenger = length(passengers)){
+					passengers <- nil;
+					startPoints <- nil;
+					endPoints <- nil;
+					isFree <- true;
+					objective <- "wander";
+					indexPassenger <- 0;
+				}
 			}
 		}
 		
@@ -149,34 +211,41 @@ species BlockCar skills:[moving]{
 	}
 	
 	action dropOff(BlockCarUser user){
-		startPoints[] >-0;
-		endPoints[] >-0;
-		passengers[] >-0;
 		user.target <- nil;
 		user.waitingForCar <- false;
 		user.askingForCar <- false;
-		user.myBlockCar <- nil;
-		if(length(passengers) = 0){ //TODO gerer plusieurs voitures
-			isFree <- true;
-		}
-		
+		user.inCar <- false;
+		user.myBlockCar <- nil;	
+		user.inAGroup <- false;
+		(user.currentTransaction).endHour <- currentHour; //TODO WRITE TRANSACTION IN A CVS FILE
+		user.currentTransaction <- nil; //TODO faire ca plus propre	
 	}
-	action addPassenger(point startPoint, building endPoint, BlockCarUser user){
-		add startPoint to: startPoints;
-		add endPoint to: endPoints;
-		add user to: passengers;
-		if(length(passengers) = nbMaxPassenger){
-			isFree <- false;
+	
+	action addPassengers(list<BlockCarUser> users){ //TODO mabe mieux d'utilisr les transactions et pas les users ?
+		isFree <- false;
+		self.passengers <- users;
+		loop user over: users{
+			add user.currentTransaction to:currentTransactions;
+			add user.location to: startPoints;
+			if(user.nextObjective = "home"){
+				add user.home to: endPoints;
+			}
+			else{
+				add user.work to: endPoints;
+			}
 		}
 		objective <- "pickUp";
 	}	
 }
 
-species transaction{
-	BlockCarUser user;
-	BlockCar driver;
-	point startPoint;
-	point endPoint;
+species Transaction{
+	BlockCarUser user <- nil;
+	BlockCar driver <- nil;
+	building startPoint <- nil;
+	building endPoint <- nil;
+	int startHour;
+	int endHour;
+	bool finished <- false;
 }
 
 experiment customizedExperiment type:gui parent:CityScopeMain{
