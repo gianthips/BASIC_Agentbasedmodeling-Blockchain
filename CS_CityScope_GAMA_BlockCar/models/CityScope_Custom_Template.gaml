@@ -15,8 +15,8 @@ import "CityScope_main.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <-100;
-	int nbBlockCar <- 30;
+	int nbBlockCarUser <-1000;
+	int nbBlockCar <- 200;
 	
 	int currentHour update: (time / #hour) mod 24;
 	float step <- 1 #mn;
@@ -47,7 +47,7 @@ species BlockCarUser skills:[moving]{
 	point target <- nil;
 	BlockCar myBlockCar <- nil;
 	bool waitingForCar <- false;
-	bool askingForCar <- false; //TODO ce truc sert juste pour l'affichage : utile?
+	bool askingForCar <- false;
 	bool inCar <- false;
 	list<BlockCarUser> copassengers <- nil;
 	bool inAGroup <- false;
@@ -89,27 +89,31 @@ species BlockCarUser skills:[moving]{
 			if(inAGroup = false){
 				copassengers <- findPeople();
 				if(length(copassengers) > 1 or (step*cycle - waitTime) > maxWaitTime){
-					if(length(copassengers) > 4){
-						write("hello");
-					}
 					inAGroup <- true;
 					loop user over: copassengers{
 						user.inAGroup <- true;
 					}
-					do askBlockCar;
-					loop user over: copassengers{
-						user.myBlockCar <- self.myBlockCar;
-					}
-					ask myBlockCar{
-						do addPassengers(myself.copassengers);
-					}
+					do findCarAndUpdateGroup;
 				}
 			}			
+		  }
+		  if(inAGroup = true and myBlockCar = nil){
+			do findCarAndUpdateGroup;
 		  }
 		  if(myBlockCar != nil){
 			waitingForCar <- true;
 			currentTransaction.driver <- myBlockCar;
 		  }
+	}
+	
+	action findCarAndUpdateGroup{
+		do askBlockCar; 
+		loop user over: copassengers{
+			user.myBlockCar <- self.myBlockCar;
+		}
+		ask myBlockCar{
+			do addPassengers(myself.copassengers);
+		}
 	}
 	
 	BlockCar askBlockCar{
@@ -121,6 +125,9 @@ species BlockCarUser skills:[moving]{
 	list<BlockCarUser> findPeople{
 		list<BlockCarUser> peoples <- nil;
 		peoples <- BlockCarUser where(each.askingForCar = true and each.inAGroup = false and each distance_to self < distanceStart and each.target distance_to self.target < distanceEnd);
+		if(length(peoples)>4){
+			write("groupé");
+		}
 		return peoples;
 	}
 	
@@ -153,7 +160,7 @@ species BlockCar skills:[moving]{
 	list<building> endPoints <- [];
 	list<BlockCarUser> passengers <- [];
 	point target <- nil;
-	float speed <- 10 #km/#h;
+	float speed <- 1 #km/#h;
 	bool isFree <- true;
 	string objective <- "wander";
 	list<Transaction> currentTransactions;
@@ -170,7 +177,7 @@ species BlockCar skills:[moving]{
 	
 	reflex move{
 		if(objective = "pickUp"){
-			target <- (startPoints at indexPassenger);
+			target <- (startPoints closest_to(self));
 			do goto target: target on: road_graph;
 			loop user over:passengers{
 				if(user.inCar = true){
@@ -210,7 +217,7 @@ species BlockCar skills:[moving]{
 		}
 		
 		else if(objective = "wander"){
-			do wander on: road_graph;
+			//do wander on: road_graph;
 		}
 	}
 	
