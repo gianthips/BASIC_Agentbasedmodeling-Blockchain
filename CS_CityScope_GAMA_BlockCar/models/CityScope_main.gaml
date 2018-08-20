@@ -29,7 +29,7 @@ global {
 	
 	//INIT PARAMETERS
 	float minimum_cycle_duration <- 0.02;
-	bool cityMatrix <-false;
+	bool cityMatrix <-true;
 	bool onlineGrid <-true; // In case cityIOServer is not working or if no internet connection
 	bool realAmenity <-true;
 	
