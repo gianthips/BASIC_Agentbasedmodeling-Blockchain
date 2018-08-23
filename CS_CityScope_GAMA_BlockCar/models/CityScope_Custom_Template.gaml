@@ -15,8 +15,8 @@ import "CityScope_main.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <- 10;
-	int nbBlockCar <- 3;
+	int nbBlockCarUser <- 5;
+	int nbBlockCar <- 2;
 	
 	int currentHour update: (time / #hour) mod 24;
 	float step <- 1 #mn;
@@ -34,6 +34,7 @@ global{
 		     home <- one_of(world.building where (each.usage = "R"));
 			 location <- any_location_in (home);
 			 work <- one_of(world.building where (each.usage = "O"));
+			 socialClass <- home.usage;
 		}
   }
 }
@@ -42,7 +43,8 @@ species BlockCarUser skills:[moving]{
 	building home;
 	building work;
 	int startWork <- 7;//world.min_work_start + rnd (world.max_work_start - world.min_work_start);
-	int endWork <- 17;//world.min_work_end + rnd (world.max_work_end - world.min_work_end);
+	int endWork <- 16;//world.min_work_end + rnd (world.max_work_end - world.min_work_end);
+	string socialClass;
 	string nextObjective <- "home";
 	point target <- nil;
 	BlockCar myBlockCar <- nil;
@@ -171,8 +173,8 @@ species BlockCar skills:[moving]{
 	}
 	
 	reflex move{
-		if(objective = "pickUp"){ 
-			int indexNext <- findNextTarget(passengers, startPoints, "pickUp");
+		if(objective = "pickUp"){
+			int indexNext <- findNextTarget(passengers, startPoints, "pickUp"); //TODO trouver un moyen qui marche de pas appeler tout le temps cette fct
 			target <- (startPoints at indexNext);
 			do goto target: target on: road_graph;
 			loop user over:passengers{
