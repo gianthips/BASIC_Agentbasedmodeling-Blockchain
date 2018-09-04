@@ -11,12 +11,13 @@ model CityScope_Custom_Template
 
 
 import "CityScope_main.gaml"
+import "UserClient.gaml"
 
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <- 5;
-	int nbBlockCar <- 2;
+	int nbBlockCarUser <- 1;
+	int nbBlockCar <- 1;
 	
 	int currentHour update: (time / #hour) mod 24;
 	float step <- 1 #mn;
@@ -39,11 +40,11 @@ global{
   }
 }
 
-species BlockCarUser skills:[moving]{
+species BlockCarUser skills:[moving, network]{
 	building home;
 	building work;
-	int startWork <- 7;//world.min_work_start + rnd (world.max_work_start - world.min_work_start);
-	int endWork <- 16;//world.min_work_end + rnd (world.max_work_end - world.min_work_end);
+	int startWork <- world.min_work_start + rnd (world.max_work_start - world.min_work_start);
+	int endWork <- world.min_work_end + rnd (world.max_work_end - world.min_work_end);
 	string socialClass;
 	string nextObjective <- "home";
 	point target <- nil;
@@ -56,6 +57,15 @@ species BlockCarUser skills:[moving]{
 	Transaction currentTransaction <- nil;
 	float waitTime;
 	float maxWaitTime <- 15.0;
+	NetworkingClient userClient <- nil;
+	
+	init{
+		create NetworkingClient {
+			do connect to: "localhost" protocol: "tcp_client" port: 8888 with_name: "Client";
+			myself.userClient <- self;
+		}
+	}
+	
 	
 	reflex updateTarget {
 		if(currentHour > startWork and currentHour < endWork and (nextObjective = "home")){
@@ -156,7 +166,7 @@ species BlockCar skills:[moving]{
 	list<point> startPoints <- [];
 	list<point> endPoints <- [];
 	list<BlockCarUser> passengers <- [];
-	point target <- nil;
+	point final_target <- nil;
 	float speed <- 1 #km/#h;
 	bool isFree <- true;
 	string objective <- "wander";
@@ -165,25 +175,25 @@ species BlockCar skills:[moving]{
 		
 	aspect base{
 		if(isFree = true){
-			draw circle(20#m) color:#green;
+			draw triangle(30) color:#green rotate:heading + 90;
 		}
 		else{
-			draw circle(20#m) color:#red;
+			draw triangle(30) color:#red rotate:heading + 90;
 		}
 	}
 	
 	reflex move{
 		if(objective = "pickUp"){
 			int indexNext <- findNextTarget(passengers, startPoints, "pickUp"); //TODO trouver un moyen qui marche de pas appeler tout le temps cette fct
-			target <- (startPoints at indexNext);
-			do goto target: target on: road_graph;
+			final_target <- (startPoints at indexNext);	
+			do goto target: final_target on: road_graph;
 			loop user over:passengers{
 				if(user.inCar = true){
 					user.location <- location;	
 				}
 			}
 			
-			if(location = target){
+			if(location = final_target){
 				(passengers at indexNext).inCar <- true;
 				(passengers at indexNext).waitingForCar <- false;
 				indexPassenger <- indexPassenger + 1;
@@ -195,14 +205,14 @@ species BlockCar skills:[moving]{
 		}
 		else if (objective = "dropOff"){
 			int indexNext <- findNextTarget(passengers, endPoints, "dropOff");
-			target <- endPoints at indexNext;
-			do goto target: target on: road_graph;
+			final_target <- endPoints at indexNext;
+			do goto target: final_target on: road_graph;
 			loop user over:passengers{
 				if(user.inCar = true){
 					user.location <- location;	
 				}
 			}
-			if(location = target){
+			if(location = final_target){
 				do dropOff(passengers at indexNext);
 				put {1000,1000,1000} at: indexNext in: endPoints; //TODO pas très joli
 				indexPassenger <- indexPassenger + 1;
@@ -225,6 +235,11 @@ species BlockCar skills:[moving]{
 	action dropOff(BlockCarUser user){
 		(user.currentTransaction).endHour <- currentHour;
 		//do saveTransaction(user.currentTransaction);
+		ask user {
+			ask userClient{
+				do sendTransaction("Transation");
+			}
+		}
 		user.target <- nil;
 		user.askingForCar <- false;
 		user.inCar <- false;
