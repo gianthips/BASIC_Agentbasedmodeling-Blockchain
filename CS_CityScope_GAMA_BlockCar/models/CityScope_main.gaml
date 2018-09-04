@@ -21,11 +21,12 @@ global {
 	
 	//ONLINE PARAMETERS
 	bool drawInteraction <- false parameter: "Draw Interaction:" category: "Interaction";
-	int distance parameter: 'distance ' category: "Interaction" min: 1 max:200 <- 100;
+	int distance parameter: 'distance ' category: "Interaction" min: 1 max:100 <- 20;
 	int refresh <- 50 min: 1 max:1000 parameter: "Refresh rate (cycle):" category: "Grid";
-	bool dynamicGrid <-false parameter: "Update Grid:" category: "Grid";
+	bool dynamicGrid <-true parameter: "Update Grid:" category: "Grid";
 	bool dynamicPop <-false parameter: "Dynamic Population:" category: "Population";
 	int refreshPop <- 100 min: 1 max:1000 parameter: "Pop Refresh rate (cycle):" category: "Population";
+	int traceTime <- 100 min:1 max:500 parameter: "Trace:" category: "Visualization";
 	
 	//INIT PARAMETERS
 	float minimum_cycle_duration <- 0.02;
@@ -39,6 +40,7 @@ global {
 	list<float> density_array;
 	list<float> current_density_array;
 	int toggle1;
+	int slider1;
 	map<int,list> citymatrix_map_settings<- [-1::["Green","Green"],0::["R","L"],1::["R","M"],2::["R","S"],3::["O","L"],4::["O","M"],5::["O","S"],6::["A","Road"],7::["A","Plaza"],8::["Pa","Park"],9::["P","Parking"]];	
 	map<string,rgb> color_map<- ["R"::#white, "O"::#gray,"S"::#gamablue, "M"::#gamaorange, "L"::#gamared, "Green"::#green, "Plaza"::#white, "Road"::#black,"Park"::#black,"Parking"::rgb(50,50,50)]; 
 	list scale_string<- ["S", "M", "L"];
@@ -46,7 +48,7 @@ global {
 	list density_map<- [89,55,15,30,18,5]; //Use for Volpe Site (Could be change for each city)
 	
 	float step <- 10 #sec;
-	int current_hour update: (time / #hour) mod 24  ;
+	int current_hour update: 6+(time / #hour) mod 24  ;
 	int current_day<-0;
 	int min_work_start <-4 ;
 	int max_work_start <- 10;
@@ -64,6 +66,7 @@ global {
 	point center;
 	float brickSize;
 	string cityIOUrl;
+	
 	init{
 		do initModel();
 	}
@@ -100,17 +103,13 @@ global {
 	    }	
 	    write " width: " + world.shape.width + " height: " + world.shape.height;
 	}
-	
-	action customInit{
-		//Nothing to do here, used to be able to overide it in a custom model;
-    }
+	action customInit{}
 	
 	action initPop{
 		  ask people {do die;}
 		  int nbPeopleToCreatePerBuilding;
 		  ask building where  (each.usage="R"){ 
 		    nbPeopleToCreatePerBuilding <- int((self.scale="S") ? (area/density_map[2])*nbFloors: ((self.scale="M") ? (area/density_map[1])*nbFloors:(area/density_map[0])*nbFloors));
-		    //do createPop(10,self,false);	
 		    do createPop(nbPeopleToCreatePerBuilding/10,self,false);			
 		  }
 		  if(length(density_array)>0){
@@ -129,18 +128,16 @@ global {
   		ask amenity where (each.fromGrid=true){
   			do die;
   		}
-		if(onlineGrid = true){
-		  cityMatrixData <- json_file(cityIOUrl).contents;
-		  if (length(list(cityMatrixData["grid"])) = nil){
-		  	cityMatrixData <- json_file("https://cityio.media.mit.edu/api/table/citymatrix_volpe").contents;
-		  }
-	    }
-	    else{
-	      cityMatrixData <- json_file("../includes/cityIO_Kendall.json").contents;
-	    }	
+		try {
+			cityMatrixData <- json_file(cityIOUrl).contents;
+		} catch {
+			cityMatrixData <- json_file("../includes/cityIO_Kendall.json").contents;
+			write #current_error + "Connection to Internet lost or cityIO is offline - CityMatrix is a local version from cityIO_Kendall.json";
+		}
 		cityMatrixCell <- cityMatrixData["grid"];
 		density_array <- cityMatrixData["objects"]["density"];
-		toggle1 <- int(cityMatrixData["objects"]["toggle1"]);	
+		toggle1 <- int(cityMatrixData["objects"]["toggle1"]);
+		slider1 <- int(cityMatrixData["objects"]["slider1"]);	
 		loop l over: cityMatrixCell { 
 		      create amenity {
 		      	  id <-int(l["type"]);
@@ -164,40 +161,41 @@ global {
             do die;
           }
         }
-		cityMatrixData <- json_file(cityIOUrl).contents;
+		
 		density_array <- cityMatrixData["objects"]["density"];
 		
+		//UPDATE POP AT RUNTIME DEPENDING ON DENSITY VALUE
 		if(cycle>10 and dynamicPop =true){
-		if(current_density_array[0] < density_array[0]){
-			float tmp<-length(people where each.fromTheGrid) * (density_array[0]/current_density_array[0] -1);
-			do generateSquarePop(tmp,"L");			
-		}
-		if(current_density_array[0] > density_array[0]){
-			float tmp<-length(people where (each.fromTheGrid))*(1-density_array[0]/current_density_array[0]);
-			ask tmp  among (people where (each.fromTheGrid and each.scale="L")){
-				do die;
+			if(current_density_array[0] < density_array[0]){
+				float tmp<-length(people where each.fromTheGrid) * (density_array[0]/current_density_array[0] -1);
+				do generateSquarePop(tmp,"L");			
 			}
-		}
-		if(current_density_array[1] < density_array[1]){
-			float tmp<-length(people where each.fromTheGrid) * (density_array[1]/current_density_array[1] -1);
-			do generateSquarePop(tmp,"M");	
-		}
-		if(current_density_array[1] > density_array[1]){
-			float tmp<-length(people where (each.fromTheGrid))*(1-density_array[1]/current_density_array[1]);
-			ask tmp  among (people where (each.fromTheGrid and each.scale="M")){
-				do die;
+			if(current_density_array[0] > density_array[0]){
+				float tmp<-length(people where (each.fromTheGrid))*(1-density_array[0]/current_density_array[0]);
+				ask tmp  among (people where (each.fromTheGrid and each.scale="L")){
+					do die;
+				}
 			}
-		}
-		if(current_density_array[2] < density_array[2]){
-			float tmp<-length(people where each.fromTheGrid) * (density_array[2]/current_density_array[2] -1);
-			do generateSquarePop(tmp,"S");
-		}
-		if(current_density_array[2] > density_array[2]){
-			float tmp<-length(people where (each.fromTheGrid))*(1-density_array[2]/current_density_array[2]);
-			ask tmp  among (people where (each.fromTheGrid and each.scale="S")){
-				do die;
+			if(current_density_array[1] < density_array[1]){
+				float tmp<-length(people where each.fromTheGrid) * (density_array[1]/current_density_array[1] -1);
+				do generateSquarePop(tmp,"M");	
 			}
-		}
+			if(current_density_array[1] > density_array[1]){
+				float tmp<-length(people where (each.fromTheGrid))*(1-density_array[1]/current_density_array[1]);
+				ask tmp  among (people where (each.fromTheGrid and each.scale="M")){
+					do die;
+				}
+			}
+			if(current_density_array[2] < density_array[2]){
+				float tmp<-length(people where each.fromTheGrid) * (density_array[2]/current_density_array[2] -1);
+				do generateSquarePop(tmp,"S");
+			}
+			if(current_density_array[2] > density_array[2]){
+				float tmp<-length(people where (each.fromTheGrid))*(1-density_array[2]/current_density_array[2]);
+				ask tmp  among (people where (each.fromTheGrid and each.scale="S")){
+					do die;
+				}
+			}
 		}
         current_density_array<-density_array;		
 	}
@@ -208,8 +206,8 @@ global {
 		do initGrid;
 	}
 	
-	reflex updateGraph when:(drawInteraction = true){// or toggle1 = 7){
-		interaction_graph <- graph<people, people>(people as_distance_graph(distance));
+	reflex updateGraph when:(drawInteraction = true or toggle1 = 7){
+		interaction_graph <- graph<people, people>(people as_distance_graph(distance + distance *slider1));
 	}
 		
 	reflex initSim when: ((cycle mod 8640) = 0){
@@ -400,17 +398,20 @@ species people skills:[moving]{
 	aspect scaleTable{
 		if(toggle1 >4)
 		{
-		  draw circle(4#m) color: color_map[scale];	
+		  draw circle(2#m) color: color_map[scale];	
 		}
       
 	}
 	
 	aspect trajectory{
 		if(curMovingMode = "travelling"){
-			draw circle(4#m) color: color_map[scale];
+			draw circle(2#m) color: color_map[scale];
 		}
-		
 	}
+	aspect timespace{
+      draw circle(2#m) color: color_map[scale] at: {location.x ,location.y,location.z+cycle mod 50};	
+	}
+			
 }
 
 species amenity parent:building schedules:[]{
@@ -481,7 +482,7 @@ experiment CityScopeMain type: gui virtual:true{
             }
             graphics "density"{
             	   if(length(density_array)>0){
-		            	    	point hpos<-{world.shape.width*0.85,world.shape.height*0.675};
+		            	point hpos<-{world.shape.width*0.85,world.shape.height*0.675};
 		             	int barW<-20;
 		             	int factor<-10;
 		             	loop i from: 0 to: length(density_array) -1{
@@ -499,6 +500,13 @@ experiment CityScopeMain type: gui virtual:true{
 					}
 				} 	
 			}
+		}
+		display CityScopeVirtualExperimental  type:opengl background:#black draw_env:false virtual:true{
+			species table aspect:base refresh:false;	
+			species road aspect: base refresh:false;
+			species people aspect:timespace trace:traceTime fading:true;		
+			species amenity aspect: onScreen ;
+            species building aspect:realistic position:{0,0,-0.0015} transparency:0.5;
 		}			
 	}
 }
@@ -508,6 +516,33 @@ experiment CityScopeVolpeDemo type: gui parent:CityScopeMain{
 	output {		
 		
         display CityScope type:opengl parent:CityScopeVirtual toolbar:false{}	
+        	
+		display CityScopeTable   type:opengl background:#black fullscreen:1 toolbar:false rotate:180 synchronized:true
+		camera_pos: {1369.1261241323866,939.6915242287623,1345.1870238795268} camera_look_pos: {1369.1293916321506,939.6682747598774,-6.435029977022782E-4} camera_up_vector: {0.13917310095974558,0.9902680685878096,1.7453299527680555E-5}{
+			
+			
+			species amenity aspect: onTable;
+			species people aspect: scale;
+			graphics "interaction_graph" {
+				if (interaction_graph != nil  and ( drawInteraction = true or toggle1=7) ) {	
+					loop eg over: interaction_graph.edges {
+                        people src <- interaction_graph source_of eg;
+                        people target <- interaction_graph target_of eg;
+						geometry edge_geom <- geometry(eg);
+						draw line(edge_geom.points)  color:rgb(0,125,0,75);
+					}
+				} 
+				draw rectangle(300,225) rotated_by 9.74 color:#black	 at: {725, 625,10} ;	
+			}	
+		}
+	}
+}
+
+experiment CityScopeVolpeDemoExpe type: gui parent:CityScopeMain{
+    float minimum_cycle_duration <- 0.02;
+	output {		
+		
+        display CityScope type:opengl parent:CityScopeVirtualExperimental toolbar:false{}	
         	
 		display CityScopeTable   type:opengl background:#black fullscreen:1 toolbar:false rotate:180 synchronized:true
 		camera_pos: {1369.1261241323866,939.6915242287623,1345.1870238795268} camera_look_pos: {1369.1293916321506,939.6682747598774,-6.435029977022782E-4} camera_up_vector: {0.13917310095974558,0.9902680685878096,1.7453299527680555E-5}{
@@ -529,3 +564,5 @@ experiment CityScopeVolpeDemo type: gui parent:CityScopeMain{
 		}
 	}
 }
+
+
