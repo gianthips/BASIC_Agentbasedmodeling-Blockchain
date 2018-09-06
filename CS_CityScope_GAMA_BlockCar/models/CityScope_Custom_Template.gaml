@@ -16,8 +16,8 @@ import "UserClient.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <- 1;
-	int nbBlockCar <- 1;
+	int nbBlockCarUser <- 5;
+	int nbBlockCar <- 2;
 	
 	int currentHour update: (time / #hour) mod 24;
 	float step <- 1 #mn;
@@ -40,7 +40,7 @@ global{
   }
 }
 
-species BlockCarUser skills:[moving, network]{
+species BlockCarUser skills:[moving]{
 	building home;
 	building work;
 	int startWork <- world.min_work_start + rnd (world.max_work_start - world.min_work_start);
@@ -57,13 +57,8 @@ species BlockCarUser skills:[moving, network]{
 	Transaction currentTransaction <- nil;
 	float waitTime;
 	float maxWaitTime <- 15.0;
-	NetworkingClient userClient <- nil;
 	
 	init{
-		create NetworkingClient {
-			do connect to: "localhost" protocol: "tcp_client" port: 8888 with_name: "Client";
-			myself.userClient <- self;
-		}
 	}
 	
 	
@@ -162,7 +157,7 @@ species BlockCarUser skills:[moving, network]{
 }
 
 
-species BlockCar skills:[moving]{
+species BlockCar skills:[moving, network]{
 	list<point> startPoints <- [];
 	list<point> endPoints <- [];
 	list<BlockCarUser> passengers <- [];
@@ -172,7 +167,15 @@ species BlockCar skills:[moving]{
 	string objective <- "wander";
 	list<Transaction> currentTransactions;
 	int indexPassenger <- 0;
-		
+	NetworkingClient userClient <- nil;
+	
+	init{
+		create NetworkingClient {
+			do connect to: "localhost" protocol: "tcp_client" port: 8888 with_name: "Client";
+			myself.userClient <- self;
+			do sendMessage("Creation;", myself.name);
+		}
+	}	
 	aspect base{
 		if(isFree = true){
 			draw triangle(30) color:#green rotate:heading + 90;
@@ -235,10 +238,8 @@ species BlockCar skills:[moving]{
 	action dropOff(BlockCarUser user){
 		(user.currentTransaction).endHour <- currentHour;
 		//do saveTransaction(user.currentTransaction);
-		ask user {
-			ask userClient{
-				do sendTransaction("Transation");
-			}
+		ask userClient{
+				do sendMessage("Transaction;",myself.name);
 		}
 		user.target <- nil;
 		user.askingForCar <- false;

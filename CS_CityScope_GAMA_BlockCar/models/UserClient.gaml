@@ -17,20 +17,18 @@ species NetworkingClient skills: [network]
 {
 	string name;
 	string dest;
-	reflex receive {
-		if (length(mailbox) > 0){
-			write mailbox;
-		}
-	}
 
 	reflex receive {
 		if (length(mailbox) > 0){
-			write("Message recu");
 			write mailbox;
 		}
 	}
-	action sendTransaction (string msg){
+	
+	action sendMessage (string msg, string nameCar){
+		list<string> splittedName <- nameCar split_with "BlockCar";
+		string Id <- splittedName at 0;
 		write "sending message ";
+		msg <- msg + Id;
 		do send to: "send" contents: msg;
 	}
 }
