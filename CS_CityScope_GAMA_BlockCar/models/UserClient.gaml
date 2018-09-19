@@ -24,11 +24,11 @@ species NetworkingClient skills: [network]
 		}
 	}
 	
-	action sendMessage (string msg, string nameCar){
-		list<string> splittedName <- nameCar split_with "BlockCar";
+	action sendMessage (string msg, string typeUser,string nameUser, string info){
+		list<string> splittedName <- nameUser split_with typeUser;
 		string Id <- splittedName at 0;
-		write "sending message ";
-		msg <- msg + Id;
+		msg <- msg + Id + ";" + info;
+		write(msg);
 		do send to: "send" contents: msg;
 	}
 }

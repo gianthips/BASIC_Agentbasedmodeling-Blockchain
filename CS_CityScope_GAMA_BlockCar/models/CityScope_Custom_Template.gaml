@@ -16,8 +16,8 @@ import "UserClient.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <- 5;
-	int nbBlockCar <- 2;
+	int nbBlockCarUser <- 1;
+	int nbBlockCar <- 1;
 	
 	int currentHour update: (time / #hour) mod 24;
 	float step <- 1 #mn;
@@ -58,7 +58,14 @@ species BlockCarUser skills:[moving]{
 	float waitTime;
 	float maxWaitTime <- 15.0;
 	
+	NetworkingClient userClient <- nil;
+	
 	init{
+		create NetworkingClient {
+			do connect to: "localhost" protocol: "tcp_client" port: 8888 with_name: "Client";
+			myself.userClient <- self;
+			do sendMessage("User;Creation;", "BlockCarUser", myself.name, "");
+		}
 	}
 	
 	
@@ -109,6 +116,12 @@ species BlockCarUser skills:[moving]{
 			waitingForCar <- true;
 			target <- nil;
 			currentTransaction.driver <- myBlockCar;
+			ask userClient{
+				list<string> splittedName <- myself.myBlockCar.name split_with "BlockCar";
+				string IdCar <- splittedName at 0;
+				string info <- myself.currentTransaction.getString();
+				do sendMessage("User;Transaction;","BlockCarUser", myself.name, info);
+			}
 		  }
 	}
 	
@@ -173,7 +186,7 @@ species BlockCar skills:[moving, network]{
 		create NetworkingClient {
 			do connect to: "localhost" protocol: "tcp_client" port: 8888 with_name: "Client";
 			myself.userClient <- self;
-			do sendMessage("Creation;", myself.name);
+			do sendMessage("Car;Creation;", "BlockCar",myself.name, "");
 		}
 	}	
 	aspect base{
@@ -237,10 +250,6 @@ species BlockCar skills:[moving, network]{
 	
 	action dropOff(BlockCarUser user){
 		(user.currentTransaction).endHour <- currentHour;
-		//do saveTransaction(user.currentTransaction);
-		ask userClient{
-				do sendMessage("Transaction;",myself.name);
-		}
 		user.target <- nil;
 		user.askingForCar <- false;
 		user.inCar <- false;
@@ -297,7 +306,21 @@ species Transaction{
 	building endPoint <- nil;
 	int startHour;
 	int endHour;
+	
 	bool finished <- false;
+	
+	string getString{
+		list<string> splittedName <- user.name split_with "BlockCarUser";
+		string userName <- splittedName at 0;
+		splittedName <- driver.name split_with "BlockCar";
+		string driverName <- splittedName at 0;
+		splittedName <- name split_with "Transaction";
+		string transName <- splittedName at 0;
+		string startPts <- startPoint.name;
+		string endPts <- endPoint.name;
+		
+		return "(" + transName + ":" + userName + ":" + driverName + ":" + startPts + ":" + endPts + ":" + string(startHour) +")" ;
+	}
 }
 
 experiment customizedExperiment type:gui parent:CityScopeMain{

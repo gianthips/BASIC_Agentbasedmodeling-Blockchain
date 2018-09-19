@@ -1,7 +1,8 @@
 import socket
 import sys
 import _thread
-import docker_env
+import docker_env_car
+import docker_env_user
 
 class ConnectionInterface:
     
@@ -11,7 +12,8 @@ class ConnectionInterface:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print('Socket created')
         self.bindSocket(s)
-        self.dockerEnvList = []
+        self.dockerEnvCarList = []
+        self.dockerEnvUserList = []
         
         #now keep talking with the client
         while 1:
@@ -48,21 +50,37 @@ class ConnectionInterface:
             #Receiving from client
             data = conn.recv(1024)
             words = self.dataProcessing(data)
-            if(words[0] == "Creation"):
-                self.createEnv(words[-1])
-            elif(words[0] == "Transaction"):
+            if(words[0] == "Car"):
+                if(words[1] == "Creation"):
+                    self.createEnvCar(words[2])
+
+                    
+            elif(words[0] == "User"):
+                if(words[1] == "Creation"):
+                    self.createEnvUser(words[2])
+                elif(words[1] == "Transaction"):
+                    info = words[3].split(":")
+                    print("Je suis dans transaction")
+                    dockerEnvOfWantedCar = self.dockerEnvCarList[int(info[2])]
+                    contractAddress = dockerEnvOfWantedCar.getContractAddress()
+                    self.dockerEnvUserList[int(words[2])].exec_query(contractAddress, words[3]) #TODO ajouter info dan exec_qury info = liste
+                #print(self.dockerEnvCarList[int(words[1])].exec_query())
 		#conn.send(b'Le serveur a recu la transaction\n')
-                print("transaction")
             else : 
                 break     
         
         #came out of loop
         conn.close()
 		
-    #Function for creating the connection with docker 
-    def createEnv(self, ID):
-        test = docker_env.DockerEnv("/bot"+ID+"/")
-        self.dockerEnvList.append(test)
+    #Function for creating the connection between a car and the docker 
+    def createEnvCar(self, ID):
+        test = docker_env_car.DockerEnvCar(ID)
+        self.dockerEnvCarList.append(test)
+        
+    #Function for creating the connection between a user and the docker 
+    def createEnvUser(self, ID):
+        test = docker_env_user.DockerEnvUser(ID)
+        self.dockerEnvUserList.append(test)
         
     #Function for extract the good information from the receiving message
     def dataProcessing(self,data):
