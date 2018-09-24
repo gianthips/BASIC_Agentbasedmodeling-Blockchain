@@ -21,10 +21,10 @@ class DockerEnvCar:
         DockerComposerID = int(self.RobotID) + 1
         self.container = self.client.containers.get("dockergethnetwork_eth_"\
                                                     + str(DockerComposerID))
-        print("dockergethnetwork_eth_" + str(DockerComposerID))
-
         
     def exec_deploy(self):
+        print("Je vais deploy voiture " + str(self.RobotID))
+        print("node /root/js/deploy.js-aux /root/smart_contracts/smart_contract_askCar.sol " + str(self.RobotID))
         response = self.container.exec_run("node /root/js/deploy.js-aux /root/smart_contracts/smart_contract_askCar.sol " + str(self.RobotID))
         return response
         
@@ -33,9 +33,9 @@ class DockerEnvCar:
 
     def extract_contract_address(self, string):
         string = str(string)
-        list = string.split("contractAddress:")
-        addressList = list[1].split("\'")
-        address = addressList[1][:-1]
+        list = string.split("contractAddress: '")
+        addressList = list[1].split("'")
+        address = addressList[0]
         return address
     
     def getContractAddress(self):

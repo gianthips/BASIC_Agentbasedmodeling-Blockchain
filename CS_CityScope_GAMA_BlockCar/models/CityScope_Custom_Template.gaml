@@ -17,10 +17,10 @@ import "UserClient.gaml"
 
 global{
 	int nbBlockCarUser <- 1;
-	int nbBlockCar <- 1;
+	int nbBlockCar <- 2;
 	
 	int currentHour update: (time / #hour) mod 24;
-	float step <- 1 #mn;
+	float step <- 0.5 #mn;
 	list<BlockCar> freeBlockCars <- nil;
 	
 	int distanceStart <- 1000;
@@ -62,7 +62,7 @@ species BlockCarUser skills:[moving]{
 	
 	init{
 		create NetworkingClient {
-			do connect to: "localhost" protocol: "tcp_client" port: 8888 with_name: "Client";
+			do connect to: "localhost" protocol: "tcp_client" port: 8887 with_name: "Client";
 			myself.userClient <- self;
 			do sendMessage("User;Creation;", "BlockCarUser", myself.name, "");
 		}
@@ -117,8 +117,6 @@ species BlockCarUser skills:[moving]{
 			target <- nil;
 			currentTransaction.driver <- myBlockCar;
 			ask userClient{
-				list<string> splittedName <- myself.myBlockCar.name split_with "BlockCar";
-				string IdCar <- splittedName at 0;
 				string info <- myself.currentTransaction.getString();
 				do sendMessage("User;Transaction;","BlockCarUser", myself.name, info);
 			}
@@ -175,7 +173,7 @@ species BlockCar skills:[moving, network]{
 	list<point> endPoints <- [];
 	list<BlockCarUser> passengers <- [];
 	point final_target <- nil;
-	float speed <- 1 #km/#h;
+	float speed <- 10 #km/#h;
 	bool isFree <- true;
 	string objective <- "wander";
 	list<Transaction> currentTransactions;
@@ -184,7 +182,7 @@ species BlockCar skills:[moving, network]{
 	
 	init{
 		create NetworkingClient {
-			do connect to: "localhost" protocol: "tcp_client" port: 8888 with_name: "Client";
+			do connect to: "localhost" protocol: "tcp_client" port: 8887 with_name: "Client";
 			myself.userClient <- self;
 			do sendMessage("Car;Creation;", "BlockCar",myself.name, "");
 		}
@@ -250,6 +248,12 @@ species BlockCar skills:[moving, network]{
 	
 	action dropOff(BlockCarUser user){
 		(user.currentTransaction).endHour <- currentHour;
+		ask user{
+			ask userClient{
+				string info <- myself.currentTransaction.getStringEndHour();
+				do sendMessage("User;addEndHour;","BlockCarUser", myself.name, info);
+			}
+		}
 		user.target <- nil;
 		user.askingForCar <- false;
 		user.inCar <- false;
@@ -320,6 +324,14 @@ species Transaction{
 		string endPts <- endPoint.name;
 		
 		return "(" + transName + ":" + userName + ":" + driverName + ":" + startPts + ":" + endPts + ":" + string(startHour) +")" ;
+	}
+	
+	string getStringEndHour{
+		list<string> splittedName <-  name split_with "Transaction";
+		string transName <- splittedName at 0;
+		splittedName <- driver.name split_with "BlockCar";
+		string driverName <- splittedName at 0;
+		return "(" + transName + ":"+ string(endHour) + ":"+driverName+")" ;
 	}
 }
 
