@@ -1,6 +1,6 @@
 /***
 * Name: CustomableCityScope
-* Author: Arnaud Grignard
+* Author: Luana Marrocco
 * Description: This is a custom template to create any species on top of the orginal CityScope Main model.
 * Tags: Tag1, Tag2, TagN
 ***/
@@ -16,8 +16,8 @@ import "UserClient.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <- 1;
-	int nbBlockCar <- 2;
+	int nbBlockCarUser <- 5;
+	int nbBlockCar <- 1; //This represent the number of accounts present in the genesis blocks
 	
 	int currentHour update: (time / #hour) mod 24;
 	float step <- 0.5 #mn;
@@ -198,7 +198,7 @@ species BlockCar skills:[moving, network]{
 	
 	reflex move{
 		if(objective = "pickUp"){
-			int indexNext <- findNextTarget(passengers, startPoints, "pickUp"); //TODO trouver un moyen qui marche de pas appeler tout le temps cette fct
+			int indexNext <- findNextTarget(passengers, startPoints, "pickUp");
 			final_target <- (startPoints at indexNext);	
 			do goto target: final_target on: road_graph;
 			loop user over:passengers{
@@ -228,7 +228,7 @@ species BlockCar skills:[moving, network]{
 			}
 			if(location = final_target){
 				do dropOff(passengers at indexNext);
-				put {1000,1000,1000} at: indexNext in: endPoints; //TODO pas très joli
+				put {1000,1000,1000} at: indexNext in: endPoints;
 				indexPassenger <- indexPassenger + 1;
 				if(indexPassenger = length(passengers)){
 					passengers <- nil;
@@ -267,7 +267,7 @@ species BlockCar skills:[moving, network]{
 		save [trans.user.name,trans.driver.name, trans.startPoint.name, trans.endPoint.name,trans.startHour,trans.endHour] to: "../results/simulation.csv" type:"csv" rewrite: false;
 	}
 	
-	action addPassengers(list<BlockCarUser> users){ //TODO mabe mieux d'utilisr les transactions et pas les users ?
+	action addPassengers(list<BlockCarUser> users){
 		isFree <- false;
 		self.passengers <- users;
 		loop user over: users{
