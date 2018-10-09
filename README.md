@@ -55,7 +55,7 @@ docker-compose scale eth=3
 
 You need to have at least one node mining. To get attached to the `geth` JavaScript console on the node you can run the following
 ```
-docker exec -it docker_get_network_eth_1 geth attach ipc://root/.ethereum/devchain/geth.ipc
+docker exec -it docker-geth-network-master_eth_1 geth attach ipc://root/.ethereum/devchain/geth.ipc
 ```
 Then you can `miner.start()`, and then check to see if it's mining by inspecting `web3.eth.mining`. 
 

@@ -41,11 +41,6 @@ class DockerEnvCar:
     
     def getContractAddress(self):
         return self.smartContractAddress
-
-    def makeMiningWhenPendingTransactionOnly(self):
-    	command = " loadScript('/root/js/checkWork.js') "
-        response = self.container.exec_run("nohup geth --exec \" " + command + " \" attach ipc://root/.ethereum/devchain/geth.ipc")
-        print("Voici la reponse du loadscript : " + str(response))
         
 
 
