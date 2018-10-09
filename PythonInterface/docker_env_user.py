@@ -4,7 +4,8 @@ import re
 
 class DockerEnvUser:
 
-    client = docker.DockerClient(base_url='tcp://192.168.99.100:2375 /')
+    #client = docker.DockerClient(base_url='tcp://192.168.99.100:2375 /'
+    client = docker.from_env()
     container = None
     UserID = None
     
@@ -15,8 +16,8 @@ class DockerEnvUser:
 
                                   
     def getContainer(self):
-        DockerComposerID = 1 #Par défaut, on dit qu'ils se connecte au noeud 1
-        self.container = self.client.containers.get("dockergethnetwork_eth_"\
+        DockerComposerID = 1
+        self.container = self.client.containers.get("docker-geth-network-master_eth_"\
                                                     + str(DockerComposerID))        
         
     def check(self):
@@ -24,11 +25,11 @@ class DockerEnvUser:
 
         
     def exec_query(self, smartContractAddress, userId, info):
-        response = self.container.exec_run("node /root/js/query.js-aux /root/smart_contracts/smart_contract_askCar.sol " + smartContractAddress + " " + str(userId) + " " + info) #TODO remplacer le 0 par le compte de chaque user
+        response = self.container.exec_run("node /root/js/query.js /root/smart_contracts/smart_contract_askingCar.sol " + smartContractAddress + " " + str(userId) + " " + info) #TODO remplacer le 0 par le compte de chaque user
         print (response)
         return response
         
     def exec_query_addHour(self, smartContractAddress, info):
-        response = self.container.exec_run("node /root/js/query_endHour.js-aux /root/smart_contracts/smart_contract_askCar.sol " + smartContractAddress + " " + str(0) + " " + info) #TODO remplacer le 0 par le compte de chaque user
+        response = self.container.exec_run("node /root/js/query_endHour.js /root/smart_contracts/smart_contract_askingCar.sol " + smartContractAddress + " " + str(0) + " " + info) #TODO remplacer le 0 par le compte de chaque user
         print (response)
         return response        

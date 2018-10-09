@@ -28,7 +28,7 @@ species NetworkingClient skills: [network]
 		list<string> splittedName <- nameUser split_with typeUser;
 		string Id <- splittedName at 0;
 		msg <- msg + Id + ";" + info;
-		write(msg);
+		//write(msg);
 		do send to: "send" contents: msg;
 	}
 }

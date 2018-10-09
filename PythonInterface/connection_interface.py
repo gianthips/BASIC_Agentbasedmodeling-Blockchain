@@ -1,6 +1,6 @@
 import socket
 import sys
-import _thread
+import thread
 import docker_env_car
 import docker_env_user
 
@@ -11,6 +11,7 @@ class ConnectionInterface:
         self.PORT = 8887 # Arbitrary non-privileged port
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print('Socket created')
+        s.settimeout(None)
         self.bindSocket(s)
         self.dockerEnvCarList = []
         self.dockerEnvUserList = []
@@ -22,7 +23,7 @@ class ConnectionInterface:
             #print('Connected with ', addr[0] , ':' , str(addr[1]))
              
             #start new thread takes 1st argument as a function name to be run, second is the tuple of arguments to the function.
-            _thread.start_new_thread(self.clientthread ,(conn,))
+            thread.start_new_thread(self.clientthread ,(conn,))
          
         s.close()
 
@@ -52,25 +53,23 @@ class ConnectionInterface:
             words = self.dataProcessing(data)
             if(words[0] == "Car"):
                 if(words[1] == "Creation"):
-                    print("Je suis dan creationCar " + words[2])
                     self.createEnvCar(int(words[2]))
 
                     
             elif(words[0] == "User"):
                 if(words[1] == "Creation"):
-                    print("Je suis dan creationUser " + words[2])
                     self.createEnvUser(int(words[2]))
                     
                 elif(words[1] == "Transaction"):
                     info = words[3].split(":")
-                    print("J'appelle la voiture " + info[2])
+                    print("Create transaction with car " + info[2])
                     dockerEnvOfWantedCar = self.dockerEnvCarList[int(info[2])]
                     contractAddress = dockerEnvOfWantedCar.getContractAddress()
                     self.dockerEnvUserList[int(words[2])].exec_query(contractAddress, info[1],words[3]) #TODO ajouter info dan exec_qury info = liste
 
                 elif(words[1] == "addEndHour"):
                     info = words[3].split(":")
-                    print("Je suis dans addEndHour")
+                    print("Adding end hour")
                     idCar = info[2].replace(")","");
                     dockerEnvOfWantedCar = self.dockerEnvCarList[int(idCar)]
                     contractAddress = dockerEnvOfWantedCar.getContractAddress()
@@ -86,13 +85,12 @@ class ConnectionInterface:
     def createEnvCar(self, ID):
         test = docker_env_car.DockerEnvCar(ID)
         self.dockerEnvCarList.append(test)
-        print("J'ai créé la voiture " + str(ID)) 
+        print("Contract of car " + str(ID) + " was deployed ") 
        
     #Function for creating the connection between a user and the docker 
     def createEnvUser(self, ID):
         test = docker_env_user.DockerEnvUser(ID)
         self.dockerEnvUserList.append(test)
-        print("J'ai créé le user " + str(ID))
     #Function for extract the good information from the receiving message
     def dataProcessing(self,data):
         data = data.decode()

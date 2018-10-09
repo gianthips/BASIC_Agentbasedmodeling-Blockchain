@@ -16,18 +16,24 @@ import "UserClient.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <- 5;
-	int nbBlockCar <- 1; //This represent the number of accounts present in the genesis blocks
+	int nbBlockCarUser <- 6 ;
+	int nbBlockCar <- 2; //This represent the number of accounts present in the genesis blocks
 	
 	int currentHour update: (time / #hour) mod 24;
-	float step <- 0.5 #mn;
+	int currentDay update: (time /#day);
+	float step <- 0.1 #mn;
 	list<BlockCar> freeBlockCars <- nil;
 	
 	int distanceStart <- 1000;
 	int distanceEnd <- 1000;
 	init{
 	}
-	
+		
+	reflex stopSim{
+		if(currentDay = 7){
+			do pause;
+		}
+	}
 	action  customInit{
 		 create BlockCar number: nbBlockCar;
 		 freeBlockCars <- BlockCar where(each.isFree = "true");
@@ -173,11 +179,12 @@ species BlockCar skills:[moving, network]{
 	list<point> endPoints <- [];
 	list<BlockCarUser> passengers <- [];
 	point final_target <- nil;
-	float speed <- 10 #km/#h;
+	float speed <- 30 #km/#h;
 	bool isFree <- true;
 	string objective <- "wander";
-	list<Transaction> currentTransactions;
+	//list<Transaction> currentTransactions;
 	int indexPassenger <- 0;
+	int indexNext <- -1;
 	NetworkingClient userClient <- nil;
 	
 	init{
@@ -198,7 +205,9 @@ species BlockCar skills:[moving, network]{
 	
 	reflex move{
 		if(objective = "pickUp"){
-			int indexNext <- findNextTarget(passengers, startPoints, "pickUp");
+			if (indexNext = -1){
+				indexNext <- findNextTarget(passengers, startPoints, "pickUp");
+			}
 			final_target <- (startPoints at indexNext);	
 			do goto target: final_target on: road_graph;
 			loop user over:passengers{
@@ -215,10 +224,13 @@ species BlockCar skills:[moving, network]{
 					objective <- "dropOff";
 					indexPassenger <- 0;
 				}
+				indexNext <- -1;
 			}
 		}
 		else if (objective = "dropOff"){
-			int indexNext <- findNextTarget(passengers, endPoints, "dropOff");
+			if(indexNext = -1){
+				indexNext <- findNextTarget(passengers, endPoints, "dropOff");
+			}
 			final_target <- endPoints at indexNext;
 			do goto target: final_target on: road_graph;
 			loop user over:passengers{
@@ -238,6 +250,7 @@ species BlockCar skills:[moving, network]{
 					objective <- "wander";
 					indexPassenger <- 0;
 				}
+				indexNext <- -1;
 			}
 		}
 		
@@ -271,7 +284,7 @@ species BlockCar skills:[moving, network]{
 		isFree <- false;
 		self.passengers <- users;
 		loop user over: users{
-			add user.currentTransaction to:currentTransactions;
+			//add user.currentTransaction to:currentTransactions;
 			add user.location to: startPoints;
 			if(user.nextObjective = "home"){
 				add any_point_in(user.home) to: endPoints;
@@ -337,15 +350,11 @@ species Transaction{
 
 experiment customizedExperiment type:gui parent:CityScopeMain{
 	output{
-		display CityScopeAndCustomSpecies type:opengl parent:CityScopeVirtual{
-			species BlockCar aspect:base;
-			species BlockCarUser aspect:base;
-			
-			
-		}
 		display CustomSpeciesOnly type:opengl{
 			species BlockCar aspect:base;
 			species BlockCarUser  aspect:base;
+			//species building aspect:base;
+			//species road aspect: base;
 				
 		}
 	}

@@ -4,7 +4,8 @@ import re
 
 class DockerEnvCar:
 
-    client = docker.DockerClient(base_url='tcp://192.168.99.100:2375 /')
+    #client = docker.DockerClient(base_url='tcp://192.168.99.100:2375 /')
+    client = docker.from_env()
     container = None
     RobotID = None
     smartContractAddress = None
@@ -19,13 +20,13 @@ class DockerEnvCar:
                                   
     def getContainer(self):
         DockerComposerID = int(self.RobotID) + 1
-        self.container = self.client.containers.get("dockergethnetwork_eth_"\
+        self.container = self.client.containers.get("docker-geth-network-master_eth_"\
                                                     + str(DockerComposerID))
         
     def exec_deploy(self):
-        print("Je vais deploy voiture " + str(self.RobotID))
-        print("node /root/js/deploy.js-aux /root/smart_contracts/smart_contract_askCar.sol " + str(self.RobotID))
-        response = self.container.exec_run("node /root/js/deploy.js-aux /root/smart_contracts/smart_contract_askCar.sol " + str(self.RobotID))
+    	# self.makeMiningWhenPendingTransactionOnly()
+        print("Deploying the car " + str(self.RobotID))
+        response = self.container.exec_run("node /root/js/deploy.js /root/smart_contracts/smart_contract_askingCar.sol " + str(self.RobotID))
         return response
         
     def check(self):
@@ -40,3 +41,11 @@ class DockerEnvCar:
     
     def getContractAddress(self):
         return self.smartContractAddress
+
+    def makeMiningWhenPendingTransactionOnly(self):
+    	command = " loadScript('/root/js/checkWork.js') "
+        response = self.container.exec_run("nohup geth --exec \" " + command + " \" attach ipc://root/.ethereum/devchain/geth.ipc")
+        print("Voici la reponse du loadscript : " + str(response))
+        
+
+
