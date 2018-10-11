@@ -7,7 +7,8 @@ const web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
 async function query(contract_path, contract_address, id, info) {
     let accounts = await web3.eth.getAccounts();
     let password = '';
-    let account = accounts[id];
+    let idMod = id % 10;
+    let account = accounts[idMod];
     let confirmed = await web3.eth.personal.unlockAccount(account, password, 0)
         .then((response) => {
                 console.log(response);
@@ -34,7 +35,7 @@ async function query(contract_path, contract_address, id, info) {
     let endPoint = web3.utils.asciiToHex(infoList[4]);
     let startHour = parseInt(infoList[5]);
     let transactionInfo =[idTrans, idUser, idCar, startPoint, endPoint, startHour];
-    console.log(transactionInfo);
+    console.log("Request taxi ok");
 
     let receipt = await Contract.methods.addTransactionInfo(idTrans, idUser, idCar, startPoint, endPoint, startHour).send({
         from: account,

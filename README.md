@@ -38,7 +38,7 @@ By default this will create:
 * 1 Ethereum Bootstrapped container
 * 1 Ethereum node (which connects to the bootstrapped container on launch)
 * 1 Netstats container (with a Web UI to view activity in the cluster)
-* 16 accounts pre-filled with Ether (you can modify or create more accounts by looking at `files/genesis.json`.) 
+* 10 accounts pre-filled with Ether (you can modify or create more accounts by looking at `files/genesis.json`.) 
 
 
 To access the Netstats Web UI:

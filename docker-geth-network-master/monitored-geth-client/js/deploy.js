@@ -23,7 +23,7 @@ async function deploy(contract_path, id_bot) {
     let interface_name = ':'+ "AskingCar";
     let abi = JSON.parse(compiledCode.contracts[interface_name].interface);
     let bytecode = compiledCode.contracts[interface_name].bytecode;
-    let VotingContract = new web3.eth.Contract(abi, account, {from: account, gas: 25000000, data: '0x' + bytecode});
+    let VotingContract = new web3.eth.Contract(abi, account, {from: account, data: '0x' + bytecode});
 
     // Parameters for the Voting contract
     // This should be removed in order to generalize the contract

@@ -16,8 +16,8 @@ import "UserClient.gaml"
 /* Insert your model definition here */
 
 global{
-	int nbBlockCarUser <- 6 ;
-	int nbBlockCar <- 2; //This represent the number of accounts present in the genesis blocks
+	int nbBlockCarUser <- 20 ;
+	int nbBlockCar <- 2; //This should be smaller or equal to the number of accounts present in the genesis blocks
 	
 	int currentHour update: (time / #hour) mod 24;
 	int currentDay update: (time /#day);
