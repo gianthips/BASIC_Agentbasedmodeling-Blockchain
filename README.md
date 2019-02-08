@@ -75,6 +75,6 @@ py connection_interface.py
 ``` 
 #### 3. Run the simulation
 
-Import the AgentBased_Simulator Project in the Gama interface and make sure that the number of cars is equal to the number of nodes of your blockchain network. When it's done, launch the experiments. Before to be able to start it, wait that each car deployed his smart contract. You will receive a confirmation message in the Python console with the address of the deployed smart contract. When the smart contracts are all deployed, you can start the simulation. 
+Import the AgentBased_Simulator folder in the Gama interface and make sure that the number of cars is equal to the number of nodes of your blockchain network. When it's done, launch the experiments. Before to be able to start it, wait that each car deployed his smart contract. You will receive a confirmation message in the Python console with the address of the deployed smart contract. When the smart contracts are all deployed, you can start the simulation. 
  
 ---
