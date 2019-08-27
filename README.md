@@ -1,5 +1,7 @@
 # BASIC : towards a Blockchained Agent-based SImulator for Cities
 
+[Website Project Description](https://www.media.mit.edu/projects/basic/overview/)
+
 This repository contains the code for the paper:
 
 L. Marrocco, E. Castello Ferrer, A. Bucchiarone, A. Grignard, L. Alonso, K. Larson, and A. ‘Sandy’ Pentland, 2019. BASIC: towards a Blockchained Agent-based SImulator for Cities.
