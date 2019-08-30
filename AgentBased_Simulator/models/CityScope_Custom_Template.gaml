@@ -1,7 +1,8 @@
 /***
 * Name: CustomableCityScope
-* Author: Luana Marrocco
+* Author: Luana Marrocco, Arnaud Grignard - 2018
 * Description: This is a custom template to create any species on top of the orginal CityScope Main model.
+* Project Description: https://www.media.mit.edu/projects/basic
 * Tags: Tag1, Tag2, TagN
 ***/
 
