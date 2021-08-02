@@ -6,7 +6,9 @@ LABEL maintainer="shindu666@gmail.com"
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
-RUN apt-get install --yes git bash nodejs npm perl emacs
+RUN apt-get install --yes curl
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
+RUN apt-get install --yes git bash nodejs perl emacs
 RUN npm install npm@latest -g
 
 RUN cd /root &&\
@@ -16,6 +18,7 @@ RUN cd /root &&\
     npm install -g pm2
 
 COPY /go-ethereum-master /root/go-ethereum
+WORKDIR /root/go-ethereum/
 RUN apt-get install --yes software-properties-common
 RUN add-apt-repository ppa:gophers/archive
 RUN apt-get update
