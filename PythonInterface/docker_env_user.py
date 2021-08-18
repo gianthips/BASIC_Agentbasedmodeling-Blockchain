@@ -17,7 +17,7 @@ class DockerEnvUser:
                                   
     def getContainer(self):
         DockerComposerID = 1
-        self.container = self.client.containers.get("docker-geth-network-master_eth_"\
+        self.container = self.client.containers.get("dockergethnetworkmaster_eth_"\
                                                     + str(DockerComposerID))        
         
     def check(self):

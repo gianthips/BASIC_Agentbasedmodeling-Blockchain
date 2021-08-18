@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+
+# <2021.8.16.> 검토 및 수정, DS Lee
+
 import docker
 import re
 
@@ -20,11 +23,11 @@ class DockerEnvCar:
                                   
     def getContainer(self):
         DockerComposerID = int(self.RobotID) + 1
-        self.container = self.client.containers.get("docker-geth-network-master_eth_"\
+        self.container = self.client.containers.get("dockergethnetworkmaster_eth_"\
                                                     + str(DockerComposerID))
         
     def exec_deploy(self):
-    	# self.makeMiningWhenPendingTransactionOnly()
+        # self.makeMiningWhenPendingTransactionOnly()
         print("Deploying the car " + str(self.RobotID))
         response = self.container.exec_run("node /root/js/deploy.js /root/smart_contracts/smart_contract_askingCar.sol " + str(self.RobotID))
         return response
@@ -34,9 +37,16 @@ class DockerEnvCar:
 
     def extract_contract_address(self, string):
         string = str(string)
-        list = string.split("contractAddress: '")
-        addressList = list[1].split("'")
-        address = addressList[0]
+        #list = string.split("contractAddress: '")
+        #addressList = list[1].split("'")
+        #address = addressList[0]
+
+        ###
+        patt = re.compile(" contractAddress: '(0x.+)'," + re.escape("\\n") + "  cumulativeGasUsed", flags=re.I)
+        res_search = re.search(patt, string)
+        address = res_search.group(1)
+        ###
+
         return address
     
     def getContractAddress(self):
