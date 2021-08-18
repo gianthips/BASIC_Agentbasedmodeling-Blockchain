@@ -1,3 +1,5 @@
+# <2021.8.16.> 수정 DS Lee
+
 FROM ubuntu:18.04
 
 LABEL version="1.0"
@@ -50,8 +52,11 @@ COPY scripts /root/scripts
 COPY smart_contracts /root/smart_contracts
 
 ADD js /root/js
+###
+RUN cd /root
 RUN npm install web3
-RUN npm install solc
+RUN npm install solc@0.4.18
+###
 
 #ADD dag/full-R23-0000000000000000 /root/.ethash/full-R23-0000000000000000
 
