@@ -1,0 +1,133 @@
+<2021.8.17.> <8.18.>
+
+CLI with putty 106.10.39.5:1024 -> 49.50.163.122:22
+& SFTP
+GUI with xrdp 49.50.163.122:3389 -> 49.50.163.122:3389
+
+Docker-container dashbord (Web UI) http://49.50.163.122:3000
+ (방화벽은 docker-compose up 할 때 자동으로 3000 포트 개방 설정됨)
+
+
+--ubuntu package 설치 확인
+#> apt list --installed | grep -Ei "desktop"
+또는
+#> dpkg -l | grep -Ei "desktop"
+
+@https://askubuntu.com/questions/17823/how-to-list-all-installed-packages
+https://sung-studynote.tistory.com/77
+https://skylit.tistory.com/60
+
+--ubuntu-desktop 설치
+#> apt update
+#> apt upgrade
+
+ -GNOME 3의 경우 (인터페이스 멋있으나 xrdp 원격 접속이 잘 안 됨)
+#> apt install -y ubuntu-desktop
+#> reboot
+
+ -XUbuntu의 경우
+#> apt install -y xubuntu-desktop
+#> reboot
+
+@https://evols-atirev.tistory.com/27
+https://tistory.lyasee.com/12
+
+--xrdp 관련 서비스 설치 및 방화벽 설정(3389 open)
+#> apt install -y xrdp
+#> iptables -I INPUT -i eth0 -p tcp --dport 3389 -m state --state NEW,ESTABLISHED -j ACCEPT
+#> iptables --list
+
+(
+#> mkdir /etc/iptables
+#> iptables-save > /etc/iptables/rules.v4
+#> iptables-restore < /etc/iptables/rules.v4
+)
+
+인터페이스 이름은 ifconfig 으로 확인
+
+
+https://littlemadoros.tistory.com/entry/XRDP-%EC%84%A4%EC%A0%95
+https://songgol.tistory.com/entry/Remote-Desktop-in-Ubuntu-1804
+https://wiki.ubuntu.com/CustomXSession
+
+https://www.cyberciti.biz/faq/how-to-save-iptables-firewall-rules-permanently-on-linux/
+
+--xsession 종류
+@https://askubuntu.com/questions/135483/how-to-configure-xrdp-to-start-cinnamon-as-default-desktop-session
+@https://goodtogreate.tistory.com/entry/%EC%9A%B0%EB%B6%84%ED%88%AC-%EB%8D%B0%EC%8A%A4%ED%81%AC%ED%86%B1-%ED%99%98%EA%B2%BD-%EC%A2%85%EB%A5%98-uBubtu-Deskptop-Environment
+
+--ubuntu xfce4 archive manager
+#> apt install -y xarchiver
+-.-> 아무 압축파일에 우클릭 -.-> Open with other application... -.-> 기본 연결 프로그램으로 설정
+#> apt install thunar-archive-plugin
+
+https://www.linuxquestions.org/questions/linux-newbie-8/file-roller-equivalent-for-xfce-634823/
+http://slackbuilds.org/repository/14.1/desktop/thunar-archive-plugin/?search=thunar-archive-plugin
+
+--open as root (thunar, nautilus) 관련
+https://www.ezeelinux.com/talk/showthread.php?tid=128
+https://tolovefeels.tistory.com/23
+
+--ubuntu thinclient_drives transport endpoint is not connected
+#> umount -l ~/thinclient_drives
+
+https://blog.naver.com/PostView.nhn?blogId=pcmola&logNo=221953186597&parentCategoryNo=&categoryNo=1&viewDate=&isShowPopularPosts=true&from=search
+
+--ubuntu failed to execute default web browser
+@https://forum.xfce.org/viewtopic.php?id=7184
+https://crossjin.tistory.com/entry/Failed-to-execute-default-Web-browser-%EC%97%90%EB%9F%AC-%EB%B0%9C%EC%83%9D%EC%8B%9C-%ED%95%B4%EA%B2%B0-%EB%B0%A9%EB%B2%95
+
+
+--ubuntu errors encountered while processing ppp
+https://blog.sengwoolee.dev/30
+
+--ubuntu chrome 설치
+설치 후
+
+Web Browser 우클릭 -.-> Properties -.-> Edit Launcher -.-> Command에 exo-open --launch WebBrowser %u --no-sandbox 작성.
+
+https://webnautes.tistory.com/1184
+@https://m.blog.naver.com/PostView.naver?isHttpsRedirect=true&blogId=sjicj&logNo=221131707046
+
+--ubuntu git-core & gitk (& github desktop)
+#> apt install -y git
+#> apt install -y gitk
+
+(
+#> wget https://github.com/shiftkey/desktop/releases/download/release-2.9.0-linux4/GitHubDesktop-linux-2.9.0-linux4.deb
+#> dpkg -i GitHubDesktop-linux-2.9.0-linux4.deb
+
+or
+
+#> wget https://github.com/shiftkey/desktop/releases/download/release-2.9.0-linux4/GitHubDesktop-linux-2.9.0-linux4.deb
+#> apt install -y gdebi-core
+#> dpkg -i GitHubDesktop-linux-2.9.0-linux4.deb
+
+#> github-desktop %U --no-sandbox
+)
+
+@http://rogerdudler.github.io/git-guide/
+https://gist.github.com/berkorbay/6feda478a00b0432d13f1fc0a50467f1
+
+-github-desktop에서는 web browser에서 Sign in 후 redirect back 안 되는 문제 有
+https://github.com/shiftkey/desktop/issues/416
+
+--ubuntu install docker
+https://docs.docker.com/engine/install/ubuntu/
+
+#> apt install -y docker-compose
+#> apt install -y docker.io
+#> snap install -y docker
+이후 containerd.io 설치
+
+ -docker container logrotate 관리
+https://ly.lv/107
+
+--etc 추후 정리 (xsession 파일 관련)
+https://askubuntu.com/questions/1103722/how-to-use-custom-xsession-with-gdm3-in-ubuntu-18-04-bionic
+
+
+--매 reboot마다 확인할 사항
+#> systemctl restart xrdp
+#> iptables-restore < /etc/iptables/rules.v4
+#> iptables --list
